@@ -4,23 +4,26 @@ from PySide6.QtCore import Qt
 class LoginPage(QWidget):
     def __init__(self, on_login_success):
         super().__init__()
-        # スライド1の白背景を再現
         self.setStyleSheet("background-color: white;")
         layout = QVBoxLayout(self)
         layout.setAlignment(Qt.AlignCenter)
+        layout.setSpacing(20)
 
-        title = QLabel("ログイン画面")
-        title.setStyleSheet("font-size: 32px; color: black; font-weight: bold; margin-bottom: 20px;")
+        title = QLabel("集中度モニタリング")
+        title.setStyleSheet("font-size: 32px; color: #1a5276; font-weight: bold;")
         layout.addWidget(title, alignment=Qt.AlignCenter)
 
         self.id_input = QLineEdit()
-        self.id_input.setPlaceholderText("ログインID(例:間々田)")
-        self.id_input.setFixedWidth(250)
-        self.id_input.setStyleSheet("color: black; padding: 5px;")
+        self.id_input.setPlaceholderText("ユーザーIDを入力してください")
+        self.id_input.setFixedWidth(280)
+        self.id_input.setStyleSheet("padding: 10px; border: 1px solid #ccc; color: black;")
         layout.addWidget(self.id_input, alignment=Qt.AlignCenter)
 
         self.login_btn = QPushButton("ログイン")
-        self.login_btn.setFixedWidth(120)
-        self.login_btn.setStyleSheet("padding: 8px;")
+        self.login_btn.setFixedWidth(280)
+        self.login_btn.setStyleSheet("""
+            QPushButton { background-color: #1a5276; color: white; padding: 12px; font-weight: bold; border: none; }
+            QPushButton:hover { background-color: #2471a3; }
+        """)
         self.login_btn.clicked.connect(on_login_success)
         layout.addWidget(self.login_btn, alignment=Qt.AlignCenter)
