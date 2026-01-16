@@ -18,7 +18,7 @@ def result_callback(result, output_image, timestamp_ms):
 
 # オプション設定
 options = FaceLandmarkerOptions(
-    base_options=BaseOptions(model_asset_path='./testFolder/face_landmarker.task'), # モデルファイルのパス
+    base_options=BaseOptions(model_asset_path='face_landmarker.task'), # モデルファイルのパス
     running_mode=VisionRunningMode.LIVE_STREAM, # Webカメラ用モード
     result_callback=result_callback,            # 結果を受け取る関数
     num_faces=1,                                # 検出する顔の数
