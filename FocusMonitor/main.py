@@ -8,6 +8,10 @@ from ui.main_window import MainWindow
 from core.detector import FaceDetector
 from common.data_struct import SensingData, ScoreData
 
+from PySide6.QtWidgets import QApplication, QMainWindow, QStackedWidget
+from ui.login_page import LoginPage
+from ui.dashboard_page import DashboardPage
+
 # --- まだ実装されていないクラスのダミー定義 (後で別ファイルへ移動) ---
 class ScoreCalculator:
     def calculate(self, one_minute_data: list) -> ScoreData:
@@ -42,6 +46,31 @@ class DBManager:
         print(f"[DB Save] Score: {data.concentration_score}")
         pass
 
+
+class FocusMonitorApp(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("集中度モニタリングサービス")
+        self.resize(1100, 700)
+
+        # 画面を重ねて切り替えるスタック構造
+        self.stack = QStackedWidget()
+        self.setCentralWidget(self.stack)
+
+        # 画面を作成して登録
+        self.login_page = LoginPage(self.on_logged_in)
+        self.dashboard_page = DashboardPage()
+
+        self.stack.addWidget(self.login_page)    # Index 0
+        self.stack.addWidget(self.dashboard_page) # Index 1
+
+    def on_logged_in(self):
+        # ログイン情報を反映して切り替え
+        user_id = self.login_page.id_input.text() or "間々田"
+        self.dashboard_page.user_label.setText(f"ログインID: {user_id}")
+        self.stack.setCurrentIndex(1)
+
+
 # -----------------------------------------------------------
 
 class MainApp:
@@ -49,7 +78,8 @@ class MainApp:
         self.app = QApplication(sys.argv)
         
         # 各モジュールの初期化
-        self.window = MainWindow()
+        # self.window = MainWindow()
+        self.window = FocusMonitorApp()
         self.detector = FaceDetector()
         self.calculator = ScoreCalculator() # ロジック班担当
         self.db = DBManager()               # DB班担当
