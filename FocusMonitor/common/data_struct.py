@@ -5,6 +5,7 @@
 from dataclasses import dataclass
 from typing import Optional, Tuple
 from datetime import datetime
+import numpy as np
 
 
 
@@ -23,9 +24,21 @@ class SensingData:
 class ScoreData:
     """計算後の集中度データ"""
     timestamp: datetime
-    concentration_score: int   # 0-100
-    is_sleeping: bool          # 居眠り判定
-    is_looking_away: bool      # よそ見判定
+    concentration_score: int    # 0-100
+    reaving_ratio: int          # 離席率　0-100
+
+@dataclass
+class CalibrationData:
+    """キャリブレーションデータ"""
+
+@dataclass
+class OneSecData:
+    """1秒ごとの集計データ"""
+    timestamp: datetime
+    looking_away_count: int    # 目線が画面外にあったフレーム数 (0-5)
+    sleeping_count: int        # 目を閉じていたフレーム数 (0-5)
+    no_face_count: int         # 顔認識できなかったフレーム数 (0-5)
+    nose_coord_std_ave: float  # 鼻の座標の標準偏差 (顔の動きの激しさ)
 
 # @dataclass
 # class Frame:

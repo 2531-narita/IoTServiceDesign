@@ -62,7 +62,7 @@ class FaceDetector:
             eye_closedness_ave = (get_score('eyeBlinkLeft') + get_score('eyeBlinkRight')) / 2.0
 
             # 視線角度(上下, 左右)
-            gaze_yaw, gaze_pitch = self.calculate_gaze_angle()
+            gaze_yaw, gaze_pitch = self._calculate_gaze_angle()
 
             # 鼻の座標
             nose_coord_x, nose_coord_y = landmarkers[4].x, landmarkers[4].y
@@ -86,12 +86,12 @@ class FaceDetector:
                     face_detected=False
                 )
     
-    def calculate_gaze_angle(self):
+    def _calculate_gaze_angle(self):
         """視線角度の計算（未実装）
         demo_looking_away.pyを参考に、上下の角度計算も追加したものを実装してください。
         返すのは yaw（左右）と pitch（上下）の2つの視線角度。
         """
-        pass
+        return 0,0
 
     def start(self):
         """解析ループを別スレッドで開始"""
