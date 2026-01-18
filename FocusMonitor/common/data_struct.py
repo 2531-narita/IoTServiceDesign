@@ -12,11 +12,12 @@ from datetime import datetime
 class SensingData:
     """センサーから取得した生データ"""
     timestamp: datetime = None
-    face_detected: bool = False  # 顔認識の有無
-    eye_openness_left: float = 0.0,   # 1.0が開いている状態に変換
-    eye_openness_right: float = 0.0  # 1.0が開いている状態に変換,
-    eye_openness: float = 0.0  # 目の開き具合 (0.0〜1.0)
-    gaze_vector: dict = None   # 視線ベクトル
+    face_detected: bool = False         # 顔認識の有無
+    eye_closedness: float = 0.0         # 両目の閉じ具合の平均値 (0.0〜1.0)
+    gaze_angle_yaw: float = 0.0         # 視線の横方向角度 (度)
+    gaze_angle_pitch: float = 0.0       # 視線の縦方向角度 (度)
+    nose_x: float = 0.0                 # 鼻のX座標
+    nose_y: float = 0.0                 # 鼻のY座標
 
 @dataclass
 class ScoreData:

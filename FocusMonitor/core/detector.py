@@ -39,15 +39,17 @@ class FaceDetector:
             running_mode=VisionRunningMode.LIVE_STREAM,
             result_callback=self._result_callback,
             num_faces=1,
-            output_face_blendshapes=True
+            output_face_blendshapes=True,
+            output_facial_transformation_matrixes=True,
         )
         self.landmarker = FaceLandmarker.create_from_options(options)
 
     def _result_callback(self, result, output_image, timestamp_ms):
         """AI解析が終わったら自動的に呼ばれる関数"""
-        if result.face_blendshapes:
-            # データの抽出（Blendshapesを利用）
+        if result.face_blendshapes and result.face_landmarks:
+            # データの抽出（Blendshapesとlandmarksを利用）
             blendshapes = result.face_blendshapes[0]
+            landmarkers = result.face_landmarks[0]
             
             # カテゴリ名からスコアを探すヘルパー関数
             def get_score(name):
@@ -56,27 +58,25 @@ class FaceDetector:
                         return b.score
                 return 0.0
 
-            eye_left = get_score('eyeBlinkLeft') # 0=開, 1=閉
-            eye_right = get_score('eyeBlinkRight')
-            
-            print(f"Left Eye Blink Score: {eye_left:.2f}, Right Eye Blink Score: {eye_right:.2f}")
+            # 両目の閉じ具合の平均 (0.0〜1.0)
+            eye_closedness_ave = (get_score('eyeBlinkLeft') + get_score('eyeBlinkRight')) / 2.0
 
-            # 顔の向きはTransformation Matrix等から計算が必要だが
-            # ここでは簡易的に「鼻の座標」のズレなどを代用するか、
-            # 本格的な回転行列計算を実装する（今回は枠組みなので省略）
+            # 視線角度(上下, 左右)
+            gaze_yaw, gaze_pitch = self.calculate_gaze_angle()
 
-            #この間に、解析結果（numpy配列の中身）から、画像の顔が
-            # ・目が空いているかを瞼の開き具合（0に行くほど開いて、１に行くほど閉じている）から、一定の数値で閉じていると判定
-            # ・目線が画面の外にあるか
-            # ・鼻の座標
-            
-            # データを更新（排他制御） ここで定義しているものを最終的にmainにわたるため、ここを変える必要がある
+            # 鼻の座標
+            nose_coord_x, nose_coord_y = landmarkers[4].x, landmarkers[4].y
+
+            # データを更新（排他制御） 
             with self.lock:
                 self.latest_data = SensingData(
                     timestamp=datetime.now(),
-                    face_detected=True,
-                    eye_openness_left=1.0 - eye_left,   # 1.0が開いている状態に変換
-                    eye_openness_right=1.0 - eye_right,
+                    face_detected=True,                     # 顔認識の有無
+                    eye_closedness = eye_closedness_ave,    # 両目の閉じ具合の平均値 (0.0〜1.0)
+                    gaze_angle_yaw = gaze_yaw,              # 視線の横方向角度 (度)
+                    gaze_angle_pitch = gaze_pitch,          # 視線の縦方向角度 (度)
+                    nose_x = nose_coord_x,                  # 鼻のX座標
+                    nose_y = nose_coord_y,                  # 鼻のY座標
                 )
         else:
             # 顔が見つからない場合
@@ -85,6 +85,13 @@ class FaceDetector:
                     timestamp=datetime.now(),
                     face_detected=False
                 )
+    
+    def calculate_gaze_angle(self):
+        """視線角度の計算（未実装）
+        demo_looking_away.pyを参考に、上下の角度計算も追加したものを実装してください。
+        返すのは yaw（左右）と pitch（上下）の2つの視線角度。
+        """
+        pass
 
     def start(self):
         """解析ループを別スレッドで開始"""
