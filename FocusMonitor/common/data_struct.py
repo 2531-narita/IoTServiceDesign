@@ -5,26 +5,40 @@
 from dataclasses import dataclass
 from typing import Optional, Tuple
 from datetime import datetime
+import numpy as np
 
 
 
 @dataclass
 class SensingData:
     """センサーから取得した生データ"""
-    timestamp: datetime
-    face_detected: bool
-    face_angle_x: float = 0.0  # 顔の向き(左右)
-    face_angle_y: float = 0.0  # 顔の向き(上下)
-    eye_openness: float = 0.0  # 目の開き具合 (0.0〜1.0)
-    gaze_vector: dict = None   # 視線ベクトル
+    timestamp: datetime = None
+    face_detected: bool = False         # 顔認識の有無
+    eye_closedness: float = 0.0         # 両目の閉じ具合の平均値 (0.0〜1.0)
+    gaze_angle_yaw: float = 0.0         # 視線の横方向角度 (度)
+    gaze_angle_pitch: float = 0.0       # 視線の縦方向角度 (度)
+    nose_x: float = 0.0                 # 鼻のX座標
+    nose_y: float = 0.0                 # 鼻のY座標
 
 @dataclass
 class ScoreData:
     """計算後の集中度データ"""
     timestamp: datetime
-    concentration_score: int   # 0-100
-    is_sleeping: bool          # 居眠り判定
-    is_looking_away: bool      # よそ見判定
+    concentration_score: int    # 0-100
+    reaving_ratio: int          # 離席率　0-100
+
+@dataclass
+class CalibrationData:
+    """キャリブレーションデータ"""
+
+@dataclass
+class OneSecData:
+    """1秒ごとの集計データ"""
+    timestamp: datetime
+    looking_away_count: int    # 目線が画面外にあったフレーム数 (0-5)
+    sleeping_count: int        # 目を閉じていたフレーム数 (0-5)
+    no_face_count: int         # 顔認識できなかったフレーム数 (0-5)
+    nose_coord_std_ave: float  # 鼻の座標の標準偏差 (顔の動きの激しさ)
 
 # @dataclass
 # class Frame:

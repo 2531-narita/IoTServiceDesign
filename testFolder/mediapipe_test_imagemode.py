@@ -1,7 +1,6 @@
 import cv2
 import mediapipe as mp
 import time
-from datetime import datetime
 
 # Tasks APIのモジュールを読み込み
 BaseOptions = mp.tasks.BaseOptions
@@ -28,8 +27,8 @@ def result_callback(result, output_image, timestamp_ms):
                 return b.score
         return 0.0
 
-    # eye_left_blink = get_score('eyeBlinkLeft') # 0=開, 1=閉
-    # eye_right_blink = get_score('eyeBlinkRight')
+    eye_left_blink = get_score('eyeBlinkLeft') # 0=開, 1=閉
+    eye_right_blink = get_score('eyeBlinkRight')
 
     # eye_left_ = get_score()
 
@@ -37,13 +36,12 @@ def result_callback(result, output_image, timestamp_ms):
 
     print(f"左目\n 目頭： {landmarkers[133].x}, 目じり： {landmarkers[33].x}, 瞳孔： {landmarkers[468].x}")
     print(f"\n右目\n 目頭： {landmarkers[362].x}, 目じり： {landmarkers[263].x}, 瞳孔： {landmarkers[473].x}")
-    print(f"\n鼻先： x:{landmarkers[4].x}, y:{landmarkers[4].y}")
 
 # オプション設定
 options = FaceLandmarkerOptions(
-    base_options=BaseOptions(model_asset_path='face_landmarker.task'), # モデルファイルのパス
-    running_mode=VisionRunningMode.LIVE_STREAM, # Webカメラ用モード
-    result_callback=result_callback,            # 結果を受け取る関数
+    base_options=BaseOptions(model_asset_path='./testFolder/face_landmarker.task'), # モデルファイルのパス
+    running_mode=VisionRunningMode.IMAGE,       # 画像用モード
+    # result_callback=result_callback,            # 結果を受け取る関数
     num_faces=1,                                # 検出する顔の数
     min_face_detection_confidence=0.5,
     min_face_presence_confidence=0.5,
