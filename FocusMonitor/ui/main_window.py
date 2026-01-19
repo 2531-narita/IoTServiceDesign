@@ -3,7 +3,7 @@
 実装はシンプルなプレースホルダを提供します。適宜拡張してください。
 """
 from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QLabel, QPushButton
-from main import MainApp
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -20,8 +20,6 @@ class MainWindow(QMainWindow):
 
         btn_start = QPushButton("Start")
         btn_stop = QPushButton("Stop")
-        btn_start.clicked.connect(MainApp.loop_start())
-        btn_start.clicked.connect(MainApp.loop_stop())
         layout.addWidget(btn_start)
         layout.addWidget(btn_stop)
 
