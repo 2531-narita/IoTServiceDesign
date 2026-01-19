@@ -140,7 +140,7 @@ class DashboardPage(QWidget):
         # 下段：棒グラフ
         ax2 = self.fig.add_subplot(212)
         ax2.set_facecolor('#1a5276')
-        if period == "日": labels = ["朝", "昼前", "昼後", "夕", "夜"]; count = 5
+        if period == "日": labels = ["朝", "昼前", "昼後", "昼後2", "夕"]; count = 5
         elif period == "週": labels = ["月", "火", "水", "木", "金"]; count = 5
         else: labels = ["1週", "2週", "3週", "4週"]; count = 4
         
