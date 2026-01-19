@@ -8,6 +8,7 @@ import numpy as np
 from ui.main_window import MainWindow
 from core.detector import FaceDetector
 from core.calculator import Calculator
+from core.calibration import Calibration
 from common.data_struct import SensingData, ScoreData, OneSecData, CalibrationData
 from database.db_manager import DBManager
 
@@ -51,11 +52,7 @@ class MainApp:
         self.timer.timeout.connect(self.main_loop)
         self.timer.start(200) 
 
-    def loop_stop(self):
-        self.timer.stop
 
-    def loop_start(self):
-        self.timer.start(200)
 
     def main_loop(self):
         """
@@ -141,6 +138,10 @@ class MainApp:
             self.window.update_display(score_data)
         else:
             print(f"現在のスコア: {score_data.concentration_score}")
+
+    def start_calibration_mode(self):
+        self.timer.stop()
+        self.calibration:CalibrationData = Calibration.get_calibration_data
 
     def run(self):
         sys.exit(self.app.exec())
