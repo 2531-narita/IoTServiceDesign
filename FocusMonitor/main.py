@@ -29,13 +29,15 @@ class MainApp:
         self.nose_5sec_buffer_y = []    # 鼻の座標yの5秒分のデータ
         self.nose_data_buffer = 0.0 # 5秒に1回更新される鼻の座標の標準偏差
 
-        # --- キャリブレーションデータ ---
+        # --- キャリブレーションによる閾値データ ---
         self.calibration = CalibrationData(
             # キャリブレーションで得る閾値の定義
             # 閾値は、集計処理に使用するやつ
             # - 視線が画面外にあると判定する角度
             # - 目を閉じていると判定する閉じ具合
             # 現状ふたつのみ
+            eye_closedness_threshold = 0.0,  # 目の閉じ具合の閾値
+            gaze_angle_threshold = 0.0,      # 画面外視線角度の閾値
         )
 
         # 検出開始
@@ -48,6 +50,12 @@ class MainApp:
         self.timer = QTimer()
         self.timer.timeout.connect(self.main_loop)
         self.timer.start(200) 
+
+    def loop_stop(self):
+        self.timer.stop
+
+    def loop_start(self):
+        self.timer.start(200)
 
     def main_loop(self):
         """

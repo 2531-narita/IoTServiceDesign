@@ -29,7 +29,9 @@ class ScoreData:
 
 @dataclass
 class CalibrationData:
-    """キャリブレーションデータ"""
+    """キャリブレーションによる閾値データ"""
+    eye_closedness_threshold: float # 目の閉じ具合の閾値
+    gaze_angle_threshold: float     # 画面外視線角度の閾値
 
 @dataclass
 class OneSecData:
