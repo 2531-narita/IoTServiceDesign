@@ -11,81 +11,13 @@ from core.calculator import Calculator
 from common.data_struct import SensingData, ScoreData, OneSecData, CalibrationData
 from database.db_manager import DBManager
 
-<<<<<<< HEAD
-from PySide6.QtWidgets import QApplication, QMainWindow, QStackedWidget
-from ui.login_page import LoginPage
-from ui.dashboard_page import DashboardPage
-
-# --- まだ実装されていないクラスのダミー定義 (後で別ファイルへ移動) ---
-class ScoreCalculator:
-    def calculate(self, one_minute_data: list) -> ScoreData:
-        """
-        1分間のデータリストを受け取り、減点方式でスコアを計算する
-        one_minute_data: 1秒ごとの集計辞書のリスト
-        """
-        # TODO: ここに要件定義書の「減点ロジック」を実装する
-        # 仮の実装：ランダムではなく、データに基づいた計算の枠組み
-        current_score = 100
-        
-        # 例: よそ見秒数の合計
-        total_looking_away = sum(d['looking_away_count'] for d in one_minute_data)
-        # 5秒(25フレーム)以上よそ見してたら減点...などのロジック記述
-        if total_looking_away > 25: 
-            current_score -= 10
-
-        return ScoreData(
-            timestamp=datetime.now(),
-            concentration_score=max(0, current_score), # 0未満にはしない
-            message="集中できています" if current_score > 80 else "休憩しましょう"
-        )
-
-class DBManager:
-    def save_detail_log(self, data: dict):
-        """1秒ごとの詳細データを保存"""
-        # print(f"[DB Save] Detail: {data}") # デバッグ用
-        pass
-
-    def save_score_log(self, data: ScoreData):
-        """1分ごとのスコアを保存"""
-        print(f"[DB Save] Score: {data.concentration_score}")
-        pass
-
-
-class FocusMonitorApp(QMainWindow):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("集中度モニタリングサービス")
-        self.resize(1100, 700)
-
-        # 画面を重ねて切り替えるスタック構造
-        self.stack = QStackedWidget()
-        self.setCentralWidget(self.stack)
-
-        # 画面を作成して登録
-        self.login_page = LoginPage(self.on_logged_in)
-        self.dashboard_page = DashboardPage()
-
-        self.stack.addWidget(self.login_page)    # Index 0
-        self.stack.addWidget(self.dashboard_page) # Index 1
-
-    def on_logged_in(self):
-        # ログイン情報を反映して切り替え
-        user_id = self.login_page.id_input.text() or "間々田"
-        self.dashboard_page.user_label.setText(f"ログインID: {user_id}")
-        self.stack.setCurrentIndex(1)
-
-
-# -----------------------------------------------------------
-=======
->>>>>>> 37f7e971ac1e95dc1ad55dad32ac6c8d538270df
 
 class MainApp:
     def __init__(self):
         self.app = QApplication(sys.argv)
         
         # 各モジュールの初期化
-        # self.window = MainWindow()
-        self.window = FocusMonitorApp()
+        self.window = MainWindow()
         self.detector = FaceDetector()
         self.calculator = Calculator() # ロジック班担当
         self.db = DBManager()               # DB班担当
