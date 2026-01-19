@@ -2,12 +2,16 @@ import sys
 import statistics
 from datetime import datetime
 from PySide6.QtWidgets import QApplication
+import numpy as np
 
 # 既存のモジュール
 from ui.main_window import MainWindow
 from core.detector import FaceDetector
-from common.data_struct import SensingData, ScoreData
+from core.calculator import Calculator
+from common.data_struct import SensingData, ScoreData, OneSecData, CalibrationData
+from database.db_manager import DBManager
 
+<<<<<<< HEAD
 from PySide6.QtWidgets import QApplication, QMainWindow, QStackedWidget
 from ui.login_page import LoginPage
 from ui.dashboard_page import DashboardPage
@@ -72,6 +76,8 @@ class FocusMonitorApp(QMainWindow):
 
 
 # -----------------------------------------------------------
+=======
+>>>>>>> 37f7e971ac1e95dc1ad55dad32ac6c8d538270df
 
 class MainApp:
     def __init__(self):
@@ -81,12 +87,24 @@ class MainApp:
         # self.window = MainWindow()
         self.window = FocusMonitorApp()
         self.detector = FaceDetector()
-        self.calculator = ScoreCalculator() # ロジック班担当
+        self.calculator = Calculator() # ロジック班担当
         self.db = DBManager()               # DB班担当
 
         # --- データバッファリング用変数 ---
         self.sec_buffer = []  # 1秒分のデータ (最大5個)
         self.min_buffer = []  # 1分分のデータ (最大60個)
+        self.nose_5sec_buffer_x = []    # 鼻の座標xの5秒分のデータ（最大25個）
+        self.nose_5sec_buffer_y = []    # 鼻の座標yの5秒分のデータ
+        self.nose_data_buffer = 0.0 # 5秒に1回更新される鼻の座標の標準偏差
+
+        # --- キャリブレーションデータ ---
+        self.calibration = CalibrationData(
+            # キャリブレーションで得る閾値の定義
+            # 閾値は、集計処理に使用するやつ
+            # - 視線が画面外にあると判定する角度
+            # - 目を閉じていると判定する閉じ具合
+            # 現状ふたつのみ
+        )
 
         # 検出開始
         self.detector.start()
@@ -121,41 +139,42 @@ class MainApp:
         # 5回分のデータを取り出し
         data_list = self.sec_buffer
 
+        # print("debug data_list:", data_list)
+
         # --- 集計処理 ---
-        # A. 目線が画面外にあったフレーム数 (ここでは仮に gaze_distance > 0.5 を閾値とする)
-        # looking_away_count = sum(1 for d in data_list if d.face_detected and d.gaze_distance > 0.5)
+        # A. 目線が画面外にあったフレーム数
+        looking_away_cnt = sum(1 for d in data_list if d.face_detected and d.gaze_angle_yaw > 25.0 and d.gaze_angle_pitch > 25.0)
         
-        # B. 目を閉じているフレーム数 (eye_openness < 0.5)
-        # 左右どちらかが開いていればOKとするか、両目か等は要件次第。ここでは平均で判定
-        sleeping_count = sum(1 for d in data_list if d.face_detected and (d.eye_openness_left + d.eye_openness_right)/2 < 0.5)
+        # B. 目を閉じているフレーム数 (eye_closedness < 0.5)
+        sleeping_cnt = sum(1 for d in data_list if d.face_detected and d.eye_closedness < 0.5)
         
         # C. 顔認識できなかったフレーム数
-        no_face_count = sum(1 for d in data_list if not d.face_detected)
+        no_face_cnt = sum(1 for d in data_list if not d.face_detected)
 
-        # D. 鼻の座標の標準偏差 (顔が見えているフレームだけで計算)
-        # 簡易的に、detector側で nose_x, nose_y を SensingData に含める必要があるが、
-        # ここでは face_angle_yaw などの揺らぎで代用、あるいは0とする
-        # ※本来は SensingData に nose_x, nose_y を追加すべき
-
-        # valid_faces = [d for d in data_list if d.face_detected]
-        # if len(valid_faces) >= 2:
-        #     # 動きの激しさを計算 (ここでは顔の向きのブレを標準偏差とする例)
-        #     stdev_val = statistics.stdev([d.face_angle_yaw for d in valid_faces])
-        # else:
-        #     stdev_val = 0.0
+        # D. 5秒間の鼻の座標の標準偏差 (顔が見えているフレームだけで計算)
+        self.nose_5sec_buffer_x += [d.nose_x for d in data_list if d.face_detected]    # x座標バッファに追加
+        self.nose_5sec_buffer_y += [d.nose_y for d in data_list if d.face_detected]    # y座標バッファに追加
+        # print(len(self.nose_5sec_buffer_x),"debug nose_5sec_buffer_x:",self.nose_5sec_buffer_x)
+        if((len(self.min_buffer)+1) % 5 == 0):                  # 5秒分のバッファがたまったとき
+            if len(self.nose_5sec_buffer_x) >= 5:                 # データの数が5個以上のとき
+                # 動きの激しさを計算 (ここでは顔の向きのブレを標準偏差とする例)
+                self.nose_data_buffer = np.average([np.std(self.nose_5sec_buffer_x),np.std(self.nose_5sec_buffer_y)], weights = [2, 1])   # 座標の標準偏差の加重平均(x:2, y:1)を代入
+                self.nose_5sec_buffer_x = []
+                self.nose_5sec_buffer_y = []
+            else:
+                self.nose_data_buffer = 0.0     # バッファデータの数が足りない場合は0.0を代入
 
         # --- DB保存用データ構造 ---
-        one_sec_summary = {
-            "timestamp": datetime.now(),
-            # "looking_away_count": looking_away_count, # 最大5
-            "sleeping_count": sleeping_count,         # 最大5
-            "no_face_count": no_face_count,           # 最大5
-            # "movement_stdev": stdev_val
-        }
+        one_sec_summary = OneSecData(
+            timestamp = datetime.now(),
+            looking_away_count = looking_away_cnt,      # 目線が画面外にあったフレーム数 (0-5)
+            sleeping_count = sleeping_cnt,              # 目を閉じていたフレーム数 (0-5)
+            no_face_count = no_face_cnt,                # 顔認識できなかったフレーム数 (0-5)
+            nose_coord_std_ave = self.nose_data_buffer, # 鼻の座標の標準偏差の平均 (顔の動きの激しさ)
+        )
 
         # 3. DBへ保存 (DB班)
-        # self.db.save_detail_log(one_sec_summary)
-        print("1秒のデータ：",one_sec_summary)
+        self.db.save_detail_log(one_sec_summary)
 
         # 1分バッファに追加
         self.min_buffer.append(one_sec_summary)
@@ -170,7 +189,7 @@ class MainApp:
         1分ごとの処理：スコア算出と画面更新
         """
         # 1分間の集計データをロジック班の計算機に渡す
-        score_data = self.calculator.calculate(self.min_buffer)
+        score_data:ScoreData = self.calculator.calculate_score(self.min_buffer)
         
         # DBへ保存
         # self.db.save_score_log(score_data)
