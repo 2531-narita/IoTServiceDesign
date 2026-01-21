@@ -33,12 +33,9 @@ class MainApp:
         # --- キャリブレーションによる閾値データ ---
         self.calibration = CalibrationData(
             # キャリブレーションで得る閾値の定義
-            # 閾値は、集計処理に使用するやつ
-            # - 視線が画面外にあると判定する角度
-            # - 目を閉じていると判定する閉じ具合
-            # 現状ふたつのみ
-            eye_closedness_threshold = 0.0,  # 目の閉じ具合の閾値
-            gaze_angle_threshold = 0.0,      # 画面外視線角度の閾値
+            eye_closedness_threshold = 0.0,     # 目の閉じ具合の閾値
+            gaze_angle_yaw_threshold = 0.0,     # 画面外視線横角度の閾値
+            gaze_angle_pitch_threshold = 0.0,   # 画面外視線縦角度の閾値
         )
 
         # 検出開始
@@ -80,10 +77,14 @@ class MainApp:
 
         # --- 集計処理 ---
         # A. 目線が画面外にあったフレーム数
-        looking_away_cnt = sum(1 for d in data_list if d.face_detected and d.gaze_angle_yaw > 25.0 and d.gaze_angle_pitch > 25.0)
+        looking_away_cnt = sum(1 for d in data_list if d.face_detected 
+                               and d.gaze_angle_yaw > self.calibration.gaze_angle_yaw_threshold 
+                               and d.gaze_angle_yaw < self.calibration.gaze_angle_yaw_threshold*-1
+                               and d.gaze_angle_pitch > self.calibration.gaze_angle_pitch_threshold
+                               and d.gaze_angle_pitch > self.calibration.gaze_angle_pitch_threshold*-1)
         
-        # B. 目を閉じているフレーム数 (eye_closedness < 0.5)
-        sleeping_cnt = sum(1 for d in data_list if d.face_detected and d.eye_closedness < 0.5)
+        # B. 目を閉じているフレーム数
+        sleeping_cnt = sum(1 for d in data_list if d.face_detected and d.eye_closedness < self.calibration.eye_closedness_threshold)
         
         # C. 顔認識できなかったフレーム数
         no_face_cnt = sum(1 for d in data_list if not d.face_detected)
@@ -142,6 +143,7 @@ class MainApp:
     def start_calibration_mode(self):
         self.timer.stop()
         self.calibration:CalibrationData = Calibration.get_calibration_data
+        self.timer.start(200)
 
     def run(self):
         sys.exit(self.app.exec())

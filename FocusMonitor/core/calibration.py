@@ -32,7 +32,11 @@ class Calibration:
         gaze_angle_max_and_min[2] = np.max([d.gaze_angle_pitch for d in select_sensing_data])
         gaze_angle_max_and_min[3] = np.min([d.gaze_angle_pitch for d in select_sensing_data])
 
-        # 目の閉じ具合の平均から閾値を算出
-        
+        # 閾値を算出
+        threshold_Data = CalibrationData(
+            eye_closedness_threshold = (eye_closedness_ave + (1 - eye_closedness_ave)/2),
+            gaze_angle_yaw_threshold = ((gaze_angle_max_and_min[0] + -1*gaze_angle_max_and_min[1])/2),
+            gaze_angle_pitch_threshold = ((gaze_angle_max_and_min[2] + -1*gaze_angle_max_and_min[3])/2),
+        )
 
-        return
+        return threshold_Data
