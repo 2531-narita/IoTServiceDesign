@@ -97,8 +97,8 @@ class MainApp:
             if len(self.nose_5sec_buffer_x) >= 5:                 # データの数が5個以上のとき
                 # 動きの激しさを計算 (ここでは顔の向きのブレを標準偏差とする例)
                 self.nose_data_buffer = np.average([np.std(self.nose_5sec_buffer_x),np.std(self.nose_5sec_buffer_y)], weights = [2, 1])   # 座標の標準偏差の加重平均(x:2, y:1)を代入
-                self.nose_5sec_buffer_x = []
-                self.nose_5sec_buffer_y = []
+                self.nose_5sec_buffer_x.clear
+                self.nose_5sec_buffer_y.clear
             else:
                 self.nose_data_buffer = 0.0     # バッファデータの数が足りない場合は0.0を代入
 
