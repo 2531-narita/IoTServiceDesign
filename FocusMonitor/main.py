@@ -42,6 +42,13 @@ class MainApp:
             gaze_angle_pitch_threshold = 20.0,   # 画面外視線縦角度の閾値
         )
 
+        # --- スコアデータ初期値 ---
+        self.self.score_data = ScoreData(
+            timestamp = datetime.now(),
+            concentration_score = 0,
+            reaving_ratio = 0,
+        )
+
         # 検出開始
         self.detector.start()
         self.window.show()
@@ -165,13 +172,13 @@ class MainApp:
 
     def process_one_minute(self):
         """1分ごとの処理：スコア算出と画面更新"""
-        score_data:ScoreData = self.calculator.calculate_score(self.min_buffer)
-        print("1分のスコア：", score_data.concentration_score)
+        self.score_data:ScoreData = self.calculator.calculate_score(self.min_buffer)
+        print("1分のスコア：", self.score_data.concentration_score)
         
         if hasattr(self.window, 'update_display'):
-            self.window.update_display(score_data)
+            self.window.update_display(self.score_data)
         else:
-            print(f"現在のスコア: {score_data.concentration_score}")
+            print(f"現在のスコア: {self.score_data.concentration_score}")
 
     def run(self):
         sys.exit(self.app.exec())

@@ -111,7 +111,7 @@ class DashboardPage(QWidget):
         if self.detector:
             self.frame_update_timer = QTimer()
             self.frame_update_timer.timeout.connect(self.update_frame_from_detector)
-            self.frame_update_timer.start(100)  # 100ms = 10fps で更新
+            self.frame_update_timer.start(50)  # 50ms = 5fps で更新
 
     def update_view_mode(self, period):
         if period == "現在":
