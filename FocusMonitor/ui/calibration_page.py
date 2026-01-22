@@ -58,7 +58,7 @@ class CalibrationPage(QWidget):
         if self.detector:
             self.frame_update_timer = QTimer()
             self.frame_update_timer.timeout.connect(self.update_frame_from_detector)
-            self.frame_update_timer.start(100)  # 100ms = 10fps で更新
+            self.frame_update_timer.start(50)  # 50ms = 5fps で更新
     
     def update_frame_from_detector(self):
         """detectorから最新フレームを取得して表示"""
