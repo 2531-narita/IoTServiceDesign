@@ -18,8 +18,8 @@ class MainApp:
         self.app = QApplication(sys.argv)
         
         # 各モジュールの初期化
-        self.window = MainWindow()
         self.detector = FaceDetector()
+        self.window = MainWindow(detector=self.detector)
         self.calculator = Calculator() # ロジック班担当
         self.db = DBManager()               # DB班担当
 
@@ -151,3 +151,4 @@ class MainApp:
 if __name__ == "__main__":
     app = MainApp()
     app.run()
+
