@@ -46,7 +46,7 @@ class Calibration:
         # 閾値計算
         # 目の閾値: 平均値と「完全に閉じた状態(1.0)」の中間など、ロジックに合わせて調整
         # ここでは前のコードのロジックを踏襲
-        eye_th = eye_closedness_ave + (1.0 - eye_closedness_ave) / 2
+        eye_th = eye_closedness_ave + (1.0 - eye_closedness_ave) / 3
         
         # 角度の閾値: 最大と最小の振れ幅の半分
         yaw_th = (yaw_max - yaw_min) / 2

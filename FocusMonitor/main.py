@@ -43,7 +43,7 @@ class MainApp:
         )
 
         # --- スコアデータ初期値 ---
-        self.self.score_data = ScoreData(
+        self.score_data = ScoreData(
             timestamp = datetime.now(),
             concentration_score = 0,
             reaving_ratio = 0,
