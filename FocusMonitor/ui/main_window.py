@@ -4,9 +4,10 @@ from ui.login_page import LoginPage
 from ui.dashboard_page import DashboardPage
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, detector = None):
         super().__init__()
         self.setWindowTitle("集中度モニタリングサービス")
+        self.detector = detector
         self.resize(1100, 700)
 
         # 画面を重ねて切り替えるスタック構造をメインウィンドウに持たせる
@@ -15,7 +16,7 @@ class MainWindow(QMainWindow):
 
         # ログイン画面とダッシュボード画面を初期化
         self.login_page = LoginPage(self.on_logged_in)
-        self.dashboard_page = DashboardPage()
+        self.dashboard_page = DashboardPage(detector=self.detector)
 
         # 画面をスタックに登録
         self.stack.addWidget(self.login_page)    # Index 0

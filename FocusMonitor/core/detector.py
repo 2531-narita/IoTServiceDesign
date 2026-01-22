@@ -17,6 +17,7 @@ class FaceDetector:
     def __init__(self):
         self.running = False
         self.latest_data = SensingData(timestamp=datetime.now())
+        self.latest_frame = None  # 最新フレーム（表示用）
         self.lock = threading.Lock() # データの読み書き衝突防止
         
         # MediaPipe設定
@@ -28,7 +29,7 @@ class FaceDetector:
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT)
 
     def _init_mediapipe(self):
-        """MediaPipe Tasks APIの初期化"""
+        """MediaPipe Tasks APIの初期化 (IMAGE モード)"""
         BaseOptions = mp.tasks.BaseOptions
         FaceLandmarker = mp.tasks.vision.FaceLandmarker
         FaceLandmarkerOptions = mp.tasks.vision.FaceLandmarkerOptions
@@ -36,16 +37,15 @@ class FaceDetector:
 
         options = FaceLandmarkerOptions(
             base_options=BaseOptions(model_asset_path='./FocusMonitor/core/face_landmarker.task'),
-            running_mode=VisionRunningMode.LIVE_STREAM,
-            result_callback=self._result_callback,
+            running_mode=VisionRunningMode.IMAGE,
             num_faces=1,
             output_face_blendshapes=True,
             output_facial_transformation_matrixes=True,
         )
         self.landmarker = FaceLandmarker.create_from_options(options)
 
-    def _result_callback(self, result, output_image, timestamp_ms):
-        """AI解析が終わったら自動的に呼ばれる関数"""
+    def _analyze_result(self, result):
+        """AI解析結果を処理 (IMAGE モード用)"""
         if result.face_blendshapes and result.face_landmarks:
             # データの抽出（Blendshapesとlandmarksを利用）
             blendshapes = result.face_blendshapes[0]
@@ -107,10 +107,14 @@ class FaceDetector:
                 time.sleep(0.1)
                 continue
 
-            # 画像をAIに渡す
+            # フレームをデータと一緒に保存（表示用）
+            with self.lock:
+                self.latest_frame = frame.copy()
+
+            # 画像をAIに渡す (IMAGE モード：同期処理)
             mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-            timestamp_ms = int(time.time() * 1000)
-            self.landmarker.detect_async(mp_image, timestamp_ms)
+            result = self.landmarker.detect(mp_image)
+            self._analyze_result(result)
             
             # 負荷調整（PCスペックに合わせて調整）
             time.sleep(0.03) 
@@ -119,6 +123,11 @@ class FaceDetector:
         """外部（UIやロジック）から最新データを取得するためのメソッド"""
         with self.lock:
             return self.latest_data
+    
+    def get_latest_frame(self):
+        """最新フレーム（顔表示用）を取得するためのメソッド"""
+        with self.lock:
+            return self.latest_frame
             
     def stop(self):
         self.running = False

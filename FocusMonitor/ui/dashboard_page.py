@@ -3,7 +3,7 @@ import random
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                              QPushButton, QTextEdit, QStackedWidget, QTableWidget, 
                              QTableWidgetItem, QHeaderView)
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QImage, QPixmap, QFont
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -14,10 +14,12 @@ from camera_worker import CameraWorker
 plt.rcParams['font.family'] = 'MS Gothic'
 
 class DashboardPage(QWidget):
-    def __init__(self):
+    def __init__(self, detector=None):
         super().__init__()
         self.setStyleSheet("background-color: #1a5276; color: white;") # スライド背景色
         self.main_layout = QVBoxLayout(self)
+        self.detector = detector  # detectorインスタンスを保持
+        self.frame_update_timer = None  # タイマー用
 
         # --- 1. ヘッダー (ログインID / 再キャリブ / 各種切替ボタン) ---
         header_top = QHBoxLayout()
@@ -105,6 +107,12 @@ class DashboardPage(QWidget):
 
         self.worker = None
         self.update_view_mode("現在")
+        
+        # フレーム更新タイマーの初期化
+        if self.detector:
+            self.frame_update_timer = QTimer()
+            self.frame_update_timer.timeout.connect(self.update_frame_from_detector)
+            self.frame_update_timer.start(100)  # 100ms = 10fps で更新
 
     def update_view_mode(self, period):
         if period == "現在":
@@ -168,5 +176,23 @@ class DashboardPage(QWidget):
         self.worker.start()
 
     def update_camera_display(self, qt_img):
-
         self.camera_label.setPixmap(QPixmap.fromImage(qt_img).scaled(400, 400, Qt.KeepAspectRatio))
+    
+    def update_frame_from_detector(self):
+        """detectorから最新フレームを取得して表示"""
+        if not self.detector:
+            return
+        
+        frame = self.detector.get_latest_frame()
+        if frame is not None:
+            # OpenCV形式 (BGR) → RGB に変換
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            
+            # RGB → QImage に変換
+            h, w, ch = rgb_frame.shape
+            bytes_per_line = 3 * w
+            qt_image = QImage(rgb_frame.data, w, h, bytes_per_line, QImage.Format_RGB888)
+            
+            # QLabel に表示
+            pixmap = QPixmap.fromImage(qt_image)
+            self.camera_label.setPixmap(pixmap.scaled(400, 400, Qt.KeepAspectRatio))
