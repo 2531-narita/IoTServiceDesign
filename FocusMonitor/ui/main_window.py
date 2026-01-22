@@ -31,8 +31,9 @@ class MainWindow(QMainWindow):
         user_id = self.login_page.id_input.text() or "間々田"
         # ダッシュボードにユーザー名を反映
         self.dashboard_page.user_label.setText(f"ログインID: {user_id}")
-        # 画面をダッシュボードへ切り替え
-        self.stack.setCurrentIndex(1)
+
+        self.start_calibration()    # ログイン後すぐキャリブレーション起動
+
     
     def start_calibration(self):
         """キャリブレーション開始"""

@@ -50,7 +50,6 @@ class MainApp:
         # タイマー設定 (200ms = 5fps)
         self.timer = QTimer()
         self.timer.timeout.connect(self.main_loop)
-        self.timer.start(200) 
 
     def main_loop(self):
         """
@@ -75,12 +74,13 @@ class MainApp:
         print("MainApp: キャリブレーションモードを開始します")
         
         # 1. キャリブレーションモジュールの準備
-        self.calibration.start() # 内部バッファをリセットするメソッド (要実装)
+        self.calibration.start() # calibration側のバッファクリア
         
         # 2. フラグを立てる (これで main_loop の動作が変わる)
         self.is_calibration_mode = True
         
-        # ※ ここで timer.stop() はしない！ループを回し続けるのがコツです。
+        self.timer.start(200)
+        
 
     def process_calibration(self, raw_data: SensingData):
         """キャリブレーション中のループ処理"""

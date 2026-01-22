@@ -18,14 +18,14 @@ class Calibration:
         """
         if sensing_data.face_detected:
             self.collected_data.append(sensing_data)
-            # 進捗をログに出す（任意）
+
             print(f"Calib progress: {len(self.collected_data)}/{self.required_samples}")
         
         # データが溜まったかチェック
         return len(self.collected_data) >= self.required_samples
 
     def calculate(self) -> CalibrationData:
-        """溜まったデータから計算を行う（ループなし）"""
+        """溜まったデータから計算を行う"""
         if not self.collected_data:
             return None # データがない場合
 
