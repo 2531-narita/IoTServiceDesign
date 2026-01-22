@@ -20,6 +20,13 @@ class FaceDetector:
         self.latest_frame = None  # 最新フレーム（表示用）
         self.lock = threading.Lock() # データの読み書き衝突防止
         
+        # 視線角度変換の仮パラメータ
+        self.EYE_MAX_YAW_DEG = 30.0
+        self.EYE_MAX_PITCH_DEG = 20.0
+
+        # 直近のblendshapes保持（視線角度計算用）
+        self._last_blendshapes = None
+
         # MediaPipe設定
         self._init_mediapipe()
         
@@ -50,6 +57,8 @@ class FaceDetector:
             # データの抽出（Blendshapesとlandmarksを利用）
             blendshapes = result.face_blendshapes[0]
             landmarkers = result.face_landmarks[0]
+
+            self._last_blendshapes = blendshapes
             
             # カテゴリ名からスコアを探すヘルパー関数
             def get_score(name):
@@ -87,11 +96,37 @@ class FaceDetector:
                 )
     
     def _calculate_gaze_angle(self):
-        """視線角度の計算（未実装）
-        demo_looking_away.pyを参考に、上下の角度計算も追加したものを実装してください。
-        返すのは yaw（左右）と pitch（上下）の2つの視線角度。
+        """視線角度の計算（yaw=左右, pitch=上下）
+        Blendshapes（eyeLook*）を使って角度に変換して返す。
         """
-        return 0,0
+        blendshapes = getattr(self, "_last_blendshapes", None)
+        if blendshapes is None:
+            return 0.0, 0.0
+
+        def get_score(name: str) -> float:
+            for b in blendshapes:
+                if getattr(b, "category_name", None) == name:
+                    return float(getattr(b, "score", 0.0))
+            return 0.0
+
+        # 左右（yaw）: out - in（両目平均）
+        left_out = get_score("eyeLookOutLeft")
+        left_in = get_score("eyeLookInLeft")
+        right_out = get_score("eyeLookOutRight")
+        right_in = get_score("eyeLookInRight")
+        eye_lr = ((left_out - left_in) + (right_out - right_in)) / 2.0
+
+        # 上下（pitch）: up - down（両目平均）
+        left_up = get_score("eyeLookUpLeft")
+        left_down = get_score("eyeLookDownLeft")
+        right_up = get_score("eyeLookUpRight")
+        right_down = get_score("eyeLookDownRight")
+        eye_ud = ((left_up - left_down) + (right_up - right_down)) / 2.0
+
+        yaw_deg = eye_lr * self.EYE_MAX_YAW_DEG
+        pitch_deg = eye_ud * self.EYE_MAX_PITCH_DEG
+
+        return float(yaw_deg), float(pitch_deg)
 
     def start(self):
         """解析ループを別スレッドで開始"""
