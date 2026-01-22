@@ -1,42 +1,59 @@
-import sys
-import time
 import numpy as np
-
-from core.detector import FaceDetector
 from common.data_struct import CalibrationData, SensingData
 
 class Calibration:
     def __init__(self):
+        self.collected_data = [] # データ保存用リスト
+        self.required_samples = 50
+
+    def start(self):
+        """キャリブレーション開始前の初期化"""
+        self.collected_data = []
+        print("キャリブレーションを開始します")
+
+    def add_data(self, sensing_data: SensingData) -> bool:
+        """
+        データを1つ追加する。
+        戻り値: 完了したら True, まだなら False
+        """
+        if sensing_data.face_detected:
+            self.collected_data.append(sensing_data)
+            # 進捗をログに出す（任意）
+            print(f"Calib progress: {len(self.collected_data)}/{self.required_samples}")
         
-        pass
+        # データが溜まったかチェック
+        return len(self.collected_data) >= self.required_samples
 
-    def get_calibration_data(self) -> CalibrationData:
+    def calculate(self) -> CalibrationData:
+        """溜まったデータから計算を行う（ループなし）"""
+        if not self.collected_data:
+            return None # データがない場合
+
+        # 目の閉じ具合
+        # ※ eye_closedness が SensingData にある前提
+        eye_vals = [d.eye_closedness for d in self.collected_data]
+        eye_closedness_ave = np.mean(eye_vals)
+
+        # 視線角度 (Yaw/Pitch)
+        yaw_vals = [d.gaze_angle_yaw for d in self.collected_data]
+        pitch_vals = [d.gaze_angle_pitch for d in self.collected_data]
+
+        yaw_max = np.max(yaw_vals)
+        yaw_min = np.min(yaw_vals)
+        pitch_max = np.max(pitch_vals)
+        pitch_min = np.min(pitch_vals)
+
+        # 閾値計算
+        # 目の閾値: 平均値と「完全に閉じた状態(1.0)」の中間など、ロジックに合わせて調整
+        # ここでは前のコードのロジックを踏襲
+        eye_th = eye_closedness_ave + (1.0 - eye_closedness_ave) / 2
         
-        select_sensing_data = []
+        # 角度の閾値: 最大と最小の振れ幅の半分
+        yaw_th = (yaw_max - yaw_min) / 2
+        pitch_th = (pitch_max - pitch_min) / 2
 
-        while(select_sensing_data >= 10):
-
-            sensingData:SensingData = FaceDetector.get_current_data()
-
-            select_sensing_data.append([sensingData.face_detected, sensingData.eye_closedness, sensingData.gaze_angle_yaw, sensingData.gaze_angle_pitch])
-
-            time.sleep(0.20)
-
-        # 目の閉じ具合の平均
-        eye_closedness_ave = np.mean([d.eye_closedness for d in select_sensing_data])
-
-        # 視線角度のそれぞれの最大値
-        gaze_angle_max_and_min = [3]    # 0:横方向の最大角度 1:横方向の最小角度 2:縦方向の最大角度 3:縦方向の最小角度
-        gaze_angle_max_and_min[0] = np.max([d.gaze_angle_yaw for d in select_sensing_data])
-        gaze_angle_max_and_min[1] = np.min([d.gaze_angle_yaw for d in select_sensing_data])
-        gaze_angle_max_and_min[2] = np.max([d.gaze_angle_pitch for d in select_sensing_data])
-        gaze_angle_max_and_min[3] = np.min([d.gaze_angle_pitch for d in select_sensing_data])
-
-        # 閾値を算出
-        threshold_Data = CalibrationData(
-            eye_closedness_threshold = (eye_closedness_ave + (1 - eye_closedness_ave)/2),
-            gaze_angle_yaw_threshold = ((gaze_angle_max_and_min[0] + -1*gaze_angle_max_and_min[1])/2),
-            gaze_angle_pitch_threshold = ((gaze_angle_max_and_min[2] + -1*gaze_angle_max_and_min[3])/2),
+        return CalibrationData(
+            eye_closedness_threshold=eye_th,
+            gaze_angle_yaw_threshold=yaw_th,
+            gaze_angle_pitch_threshold=pitch_th
         )
-
-        return threshold_Data

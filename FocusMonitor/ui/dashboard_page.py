@@ -14,11 +14,12 @@ from camera_worker import CameraWorker
 plt.rcParams['font.family'] = 'MS Gothic'
 
 class DashboardPage(QWidget):
-    def __init__(self, detector=None):
+    def __init__(self, detector=None, main_window=None):
         super().__init__()
         self.setStyleSheet("background-color: #1a5276; color: white;") # スライド背景色
         self.main_layout = QVBoxLayout(self)
         self.detector = detector  # detectorインスタンスを保持
+        self.main_window = main_window  # MainWindowインスタンスを保持
         self.frame_update_timer = None  # タイマー用
 
         # --- 1. ヘッダー (ログインID / 再キャリブ / 各種切替ボタン) ---
@@ -170,10 +171,9 @@ class DashboardPage(QWidget):
             self.history_table.setItem(i, 1, QTableWidgetItem(status))
 
     def start_calibration(self):
-        if self.worker and self.worker.isRunning(): return
-        self.worker = CameraWorker()
-        self.worker.image_data.connect(self.update_camera_display)
-        self.worker.start()
+        """キャリブレーション開始"""
+        if self.main_window:
+            self.main_window.start_calibration()
 
     def update_camera_display(self, qt_img):
         self.camera_label.setPixmap(QPixmap.fromImage(qt_img).scaled(400, 400, Qt.KeepAspectRatio))
