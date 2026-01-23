@@ -175,10 +175,12 @@ class MainApp:
         self.score_data:ScoreData = self.calculator.calculate_score(self.min_buffer)
         print("1分のスコア：", self.score_data.concentration_score)
         
-        if hasattr(self.window, 'update_display'):
-            self.window.update_display(self.score_data)
-        else:
-            print(f"現在のスコア: {self.score_data.concentration_score}")
+        # DBにスコアを保存
+        self.db.save_score_log(self.score_data)
+        
+        # ダッシュボード画面を更新
+        if self.window and hasattr(self.window, 'dashboard_page'):
+            self.window.dashboard_page.refresh_current_view()
 
     def run(self):
         sys.exit(self.app.exec())
