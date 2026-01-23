@@ -1,12 +1,13 @@
-"""SQLite を使った簡易データベース管理
-
-用途: 集中度スコアの永続化（保存・読み出し）
+"""SQLite を使った簡易データベース管理 (修正版)
+main.py の集計ロジックに対応
 """
 import sqlite3
-import time
-from typing import List
-from common.data_struct import OneSecData, ScoreData
-
+from datetime import datetime
+# common.data_struct の場所に合わせて調整してください
+try:
+    from common.data_struct import OneSecData, ScoreData
+except ImportError:
+    from common.data_struct import OneSecData, ScoreData
 
 class DBManager:
     def __init__(self, db_path: str = "focusmonitor.db"):
@@ -14,43 +15,90 @@ class DBManager:
         self._ensure_schema()
 
     def _ensure_schema(self):
+        """テーブルが存在しない場合に作成する"""
         with sqlite3.connect(self.db_path) as conn:
             c = conn.cursor()
-            c.execute(
-                """
-                CREATE TABLE IF NOT EXISTS focus_scores (
+            
+            # 1秒ごとの集計ログ用テーブル（main.pyの構造に合わせました）
+            c.execute("""
+                CREATE TABLE IF NOT EXISTS detail_logs (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    timestamp REAL NOT NULL,
-                    score REAL NOT NULL,
+                    timestamp TEXT,
+                    looking_away_count INTEGER,
+                    sleeping_count INTEGER,
+                    no_face_count INTEGER,
+                    nose_movement REAL
+                )
+            """)
+
+            # 1分ごとのスコア用テーブル
+            c.execute("""
+                CREATE TABLE IF NOT EXISTS score_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp TEXT,
+                    score REAL,
                     note TEXT
                 )
-                """
-            )
+            """)
             conn.commit()
 
     def save_detail_log(self, data: OneSecData):
-        """1秒ごとの詳細データを保存"""
-        print(f"\n[DB Save] Detail: {data}") # デバッグ用
-        pass
+        """1秒ごとの集計データを保存"""
+        # main.py から渡される datetime オブジェクトを文字列に変換
+        ts_str = data.timestamp.strftime('%Y-%m-%d %H:%M:%S.%f')
+        
+        with sqlite3.connect(self.db_path) as conn:
+            c = conn.cursor()
+            c.execute("""
+                INSERT INTO detail_logs (
+                    timestamp, 
+                    looking_away_count, 
+                    sleeping_count, 
+                    no_face_count, 
+                    nose_movement
+                ) VALUES (?, ?, ?, ?, ?)
+            """, (
+                ts_str,
+                data.looking_away_count,
+                data.sleeping_count,
+                data.no_face_count,
+                data.nose_coord_std_ave
+            ))
+            conn.commit()
 
     def save_score_log(self, data: ScoreData):
         """1分ごとのスコアを保存"""
-        print(f"\n\n[DB Save] Score: {data.concentration_score}")
-        pass
+        print(f"\n[DB Save] Score: {data.concentration_score}")
+        
+        # data.timestamp が datetime型か float型かで処理を分ける（念のため）
+        if isinstance(data.timestamp, datetime):
+            ts_str = data.timestamp.strftime('%Y-%m-%d %H:%M:%S')
+        else:
+            ts_str = str(data.timestamp)
 
-### 以下は見本
-    # def save_score(self, score: FocusScore):
-    #     with sqlite3.connect(self.db_path) as conn:
-    #         c = conn.cursor()
-    #         c.execute(
-    #             "INSERT INTO focus_scores (timestamp, score, note) VALUES (?, ?, ?)",
-    #             (score.timestamp, score.score, score.note),
-    #         )
-    #         conn.commit()
+        with sqlite3.connect(self.db_path) as conn:
+            c = conn.cursor()
+            c.execute("""
+                INSERT INTO score_logs (timestamp, score, note) 
+                VALUES (?, ?, ?)
+            """, (
+                ts_str, 
+                data.concentration_score, 
+                "" # note
+            ))
+            conn.commit()
 
-    # def get_recent(self, limit: int = 100) -> List[FocusScore]:
-    #     with sqlite3.connect(self.db_path) as conn:
-    #         c = conn.cursor()
-    #         c.execute("SELECT timestamp, score, note FROM focus_scores ORDER BY timestamp DESC LIMIT ?", (limit,))
-    #         rows = c.fetchall()
-    #     return [FocusScore(timestamp=r[0], score=r[1], note=r[2]) for r in rows]
+    # 分析用メソッド
+    def get_recent_details(self, limit: int = 100):
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            c = conn.cursor()
+            c.execute("SELECT * FROM detail_logs ORDER BY timestamp DESC LIMIT ?", (limit,))
+            return [dict(row) for row in c.fetchall()]
+
+    def get_recent_scores(self, limit: int = 100):
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            c = conn.cursor()
+            c.execute("SELECT * FROM score_logs ORDER BY timestamp DESC LIMIT ?", (limit,))
+            return [dict(row) for row in c.fetchall()]
