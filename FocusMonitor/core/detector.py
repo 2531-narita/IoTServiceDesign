@@ -7,6 +7,7 @@ import time
 import cv2
 import mediapipe as mp
 import threading
+import os
 from datetime import datetime
 
 # 自作モジュールのインポート
@@ -35,7 +36,7 @@ class FaceDetector:
         VisionRunningMode = mp.tasks.vision.RunningMode
 
         options = FaceLandmarkerOptions(
-            base_options=BaseOptions(model_asset_path='./FocusMonitor/core/face_landmarker.task'),
+            base_options=BaseOptions(model_asset_path='core/face_landmarker.task'),
             running_mode=VisionRunningMode.LIVE_STREAM,
             result_callback=self._result_callback,
             num_faces=1,
