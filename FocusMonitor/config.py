@@ -21,3 +21,6 @@ THRESHOLD_FACE_PITCH = 0.2
 # 減点ルール
 SCORE_DEDUCT_LOOKING_AWAY = 1  # よそ見の減点/秒
 SCORE_DEDUCT_SLEEPING = 5      # 居眠りの減点/秒
+
+# UIの履歴表示数
+HISTORY_DISPLAY_COUNT = 60  # 最新60件を表示

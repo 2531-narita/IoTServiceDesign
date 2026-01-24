@@ -10,6 +10,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 from database.db_manager import DBManager
+from config import HISTORY_DISPLAY_COUNT
 
 plt.rcParams['font.family'] = 'MS Gothic'
 
@@ -97,7 +98,7 @@ class DashboardPage(QWidget):
         self.page_history = QWidget()
         hist_v = QVBoxLayout(self.page_history)
         hist_v.addWidget(QLabel("過去の履歴"))
-        self.history_table = QTableWidget(10, 2)
+        self.history_table = QTableWidget(HISTORY_DISPLAY_COUNT, 2)
         self.history_table.setHorizontalHeaderLabels(["平均スコア", "状態"])
         self.history_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.history_table.setStyleSheet("background-color: white; color: black;")
@@ -316,9 +317,9 @@ class DashboardPage(QWidget):
 
     def fill_history_table(self):
         """履歴テーブルにDBデータを補充"""
-        recent_scores = self.db_manager.get_recent_scores(limit=10)
+        recent_scores = self.db_manager.get_recent_scores(limit=HISTORY_DISPLAY_COUNT)
         for i, score_data in enumerate(recent_scores):
-            if i >= 10:  # テーブルは最大10行
+            if i >= 60:  # テーブルは最大60行
                 break
             timestamp = score_data['timestamp']
             score = score_data['score']
@@ -328,7 +329,7 @@ class DashboardPage(QWidget):
             self.history_table.setItem(i, 1, QTableWidgetItem(status))
         
         # 残りの行をクリア
-        for i in range(len(recent_scores), 10):
+        for i in range(len(recent_scores), HISTORY_DISPLAY_COUNT):
             self.history_table.setItem(i, 0, QTableWidgetItem(""))
             self.history_table.setItem(i, 1, QTableWidgetItem(""))
 
