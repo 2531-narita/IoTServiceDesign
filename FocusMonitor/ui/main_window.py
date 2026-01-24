@@ -1,5 +1,6 @@
 import sys
 from PySide6.QtWidgets import QMainWindow, QStackedWidget
+from PySide6.QtGui import QCloseEvent
 from ui.login_page import LoginPage
 from ui.dashboard_page import DashboardPage
 from ui.calibration_page import CalibrationPage
@@ -47,3 +48,20 @@ class MainWindow(QMainWindow):
         """キャリブレーション終了"""
         # ダッシュボードに戻る
         self.stack.setCurrentIndex(1)
+    
+    def closeEvent(self, event: QCloseEvent):
+        """ウィンドウをクローズするイベント処理（×ボタンが押された時）"""
+        print("ウィンドウをクローズしています...")
+        
+        # メインループのタイマーを停止
+        if self.main_app and hasattr(self.main_app, 'timer'):
+            self.main_app.timer.stop()
+            print("メインループタイマーを停止しました")
+        
+        # detectorのループを停止
+        if self.detector:
+            self.detector.stop()
+            print("detectorを停止しました")
+        
+        # ウィンドウのクローズを実行
+        event.accept()
