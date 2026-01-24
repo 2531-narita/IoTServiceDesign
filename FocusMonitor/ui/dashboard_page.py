@@ -265,12 +265,12 @@ class DashboardPage(QWidget):
         """今週のデータを1日ごとに7つに分割して、各日の最大スコアを取得"""
         today = datetime.now().date()
         # 今週の月曜日を取得
-        monday = today - timedelta(days=today.weekday())
+        sunday = today - timedelta(days=today.weekday())
         
         labels = []
         values = []
         for i in range(7):
-            target_date = monday + timedelta(days=i)
+            target_date = sunday + timedelta(days=i)
             day_data = [d['score'] for d in parsed_data if d['timestamp'].date() == target_date]
             max_score = max(day_data) if day_data else 0
             labels.append(target_date.strftime("%m/%d"))  # 月/日 形式
@@ -284,21 +284,21 @@ class DashboardPage(QWidget):
         # 月初を取得
         first_day = today.replace(day=1)
         # 月初の週の月曜日を取得
-        monday = first_day - timedelta(days=first_day.weekday())
+        sunday = first_day - timedelta(days=first_day.weekday()+1)
         
         labels = []
         values = []
         week_num = 1
         
-        current_monday = monday
+        current_sunday = sunday
         while True:
-            week_end = current_monday + timedelta(days=7)
+            week_end = current_sunday + timedelta(days=6)
             # その週のデータを取得（ただし当月のみ）
             week_data = [d['score'] for d in parsed_data 
-                        if current_monday <= d['timestamp'].date() < week_end 
+                        if current_sunday <= d['timestamp'].date() < week_end 
                         and d['timestamp'].month == today.month]
             
-            if not week_data and current_monday.month > today.month:
+            if not week_data and current_sunday.month == today.month+1:
                 # 来月のデータが出始めたら終了
                 break
             
@@ -306,7 +306,7 @@ class DashboardPage(QWidget):
             labels.append(f"第{week_num}週")
             values.append(max_score)
             
-            current_monday = week_end
+            current_sunday = week_end + timedelta(days=1)
             week_num += 1
             
             if week_num > 6:  # 最大6週まで
