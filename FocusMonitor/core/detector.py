@@ -165,6 +165,16 @@ class FaceDetector:
             return self.latest_frame
             
     def stop(self):
+        """detectorのループを安全に停止し、スレッドの終了を待つ"""
+        print("Detector: ループを停止しています...")
         self.running = False
+        
+        # スレッドが実行中の場合、その終了を待つ
+        if hasattr(self, 'thread') and self.thread.is_alive():
+            self.thread.join(timeout=2.0)  # 最大2秒待機
+            print("Detector: スレッドの終了を確認しました")
+        
+        # カメラをリリース
         if self.cap.isOpened():
             self.cap.release()
+            print("Detector: カメラをリリースしました")
