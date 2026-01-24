@@ -1,5 +1,6 @@
 import cv2
 import random
+from datetime import datetime, timedelta
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                              QPushButton, QTextEdit, QStackedWidget, QTableWidget, 
                              QTableWidgetItem, QHeaderView)
@@ -8,6 +9,7 @@ from PySide6.QtGui import QImage, QPixmap, QFont
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
+from database.db_manager import DBManager
 
 plt.rcParams['font.family'] = 'MS Gothic'
 
@@ -19,6 +21,7 @@ class DashboardPage(QWidget):
         self.detector = detector  # detectorインスタンスを保持
         self.main_window = main_window  # MainWindowインスタンスを保持
         self.frame_update_timer = None  # タイマー用
+        self.db_manager = DBManager()  # DBManagerインスタンスを保持
 
         # --- 1. ヘッダー (ログインID / 再キャリブ / 各種切替ボタン) ---
         header_top = QHBoxLayout()
@@ -116,57 +119,218 @@ class DashboardPage(QWidget):
     def update_view_mode(self, period):
         if period == "現在":
             self.right_stack.setCurrentIndex(0)
-            self.score_log.setPlainText(self.generate_dummy_list())
+            self.refresh_current_view()
         elif period == "履歴":
             self.right_stack.setCurrentIndex(2)
             self.fill_history_table()
         else:
             self.right_stack.setCurrentIndex(1)
             self.draw_stats_graphs(period)
+    
+    def refresh_current_view(self):
+        """現在訪啊を更新（main.pyからの直接呼び出し用）"""
+        self.score_log.setPlainText(self.generate_dummy_list())
+
+    def get_status(self, score, reaving_ratio):
+        """スコアと離席率からステータスを判定"""
+        # 離席率が90%を超えている場合は離席
+        if reaving_ratio > 90:
+            return "離席"
+        # スコアに基づいて判定
+        elif score >= 70:
+            return "集中"
+        elif 40 <= score < 70:
+            return "注意散漫"
+        else:  # score < 40
+            return "非集中"
 
     def generate_dummy_list(self):
-        """スライド4風のリスト用ダミーデータ生成"""
+        """DBから最近のスコアを取得して表示"""
+        recent_scores = self.db_manager.get_recent_scores(limit=10)
         lines = []
-        for i in range(10):
-            score = random.randint(40, 95)
-            status = "集中" if score > 75 else "注意散漫"
-            lines.append(f"10:22:{i:02d}  {score}  {status}")
+        for score_data in recent_scores:
+            timestamp = score_data['timestamp']
+            score = score_data['score']
+            reaving_ratio = score_data.get('reaving_ratio', 0) or 0  # NullやNoneの場合は0
+            status = self.get_status(score, reaving_ratio)
+            lines.append(f"{timestamp}  {score:.1f}  {status}")
+        
+        # データがない場合はダミーメッセージ
+        if not lines:
+            return "スコアデータが利用できません"
         return "\n".join(lines)
 
     def draw_stats_graphs(self, period):
-        """日・週・月用のバラバラなグラフ描画"""
+        """日・週・月用のグラフ描画（時間帯ごとの最大スコアを表示）"""
         self.fig.clear()
+        recent_scores = self.db_manager.get_recent_scores(limit=1000)  # より多くのデータを取得
+        
+        if not recent_scores:
+            ax = self.fig.add_subplot(111)
+            ax.set_facecolor('#1a5276')
+            ax.text(0.5, 0.5, 'データが利用できません', 
+                   horizontalalignment='center', verticalalignment='center',
+                   color='white', transform=ax.transAxes)
+            self.canvas.draw()
+            return
+        
+        # タイムスタンプをパース
+        parsed_data = []
+        for s in recent_scores:
+            try:
+                timestamp = datetime.strptime(s['timestamp'], '%Y-%m-%d %H:%M:%S')
+                parsed_data.append({
+                    'timestamp': timestamp,
+                    'score': s['score'],
+                    'reaving_ratio': s.get('reaving_ratio', 0) or 0
+                })
+            except:
+                continue
+        
+        if not parsed_data:
+            ax = self.fig.add_subplot(111)
+            ax.set_facecolor('#1a5276')
+            ax.text(0.5, 0.5, 'パース可能なデータがありません', 
+                   horizontalalignment='center', verticalalignment='center',
+                   color='white', transform=ax.transAxes)
+            self.canvas.draw()
+            return
+        
+        # スコアデータから統計情報を計算（全体用）
+        scores = [s['score'] for s in recent_scores]
+        avg_score = sum(scores) / len(scores) if scores else 0
+        
+        # 集中度による分類（新しい条件）
+        focused_count = sum(1 for s in recent_scores if s['reaving_ratio'] <= 90 and s['score'] >= 70)
+        distracted_count = sum(1 for s in recent_scores if s['reaving_ratio'] <= 90 and 40 <= s['score'] < 70)
+        unfocused_count = sum(1 for s in recent_scores if s['reaving_ratio'] <= 90 and s['score'] < 40)
+        away_count = sum(1 for s in recent_scores if s['reaving_ratio'] > 90)
         
         # 上段：円グラフ
         ax1 = self.fig.add_subplot(211)
         ax1.set_facecolor('#1a5276')
-        vals = [random.randint(50, 80), random.randint(10, 30), random.randint(5, 15)]
-        ax1.pie(vals, labels=["集中", "注意散漫", "離席"], autopct='%1.1f%%', colors=['#9b59b6', '#f1c40f', '#3498db'], textprops={'color':"white"})
+        vals = [focused_count, distracted_count, unfocused_count, away_count]
+        labels = ["集中", "注意散漫", "非集中", "離席"]
+        ax1.pie(vals, labels=labels, autopct='%1.1f%%', colors=['#9b59b6', '#f1c40f', '#e74c3c', '#3498db'], textprops={'color':"white"})
         ax1.set_title(f"{period}の集中度内訳", color='white')
 
-        # 下段：棒グラフ
+        # 下段：棒グラフ（時間帯ごとの最大スコア）
         ax2 = self.fig.add_subplot(212)
         ax2.set_facecolor('#1a5276')
-        if period == "日": labels = ["朝", "昼前", "昼後", "昼後2", "夕"]; count = 5
-        elif period == "週": labels = ["月", "火", "水", "木", "金"]; count = 5
-        else: labels = ["1週", "2週", "3週", "4週"]; count = 4
         
-        bar_vals = [random.randint(60, 95) for _ in range(count)]
-        ax2.bar(labels, bar_vals, color='#2ecc71')
+        if period == "日":
+            display_labels, bar_vals = self._get_daily_max_scores(parsed_data)
+        elif period == "週":
+            display_labels, bar_vals = self._get_weekly_max_scores(parsed_data)
+        elif period == "月":
+            display_labels, bar_vals = self._get_monthly_max_scores(parsed_data)
+        else:
+            display_labels = []
+            bar_vals = []
+        
+        ax2.bar(display_labels, bar_vals, color='#2ecc71')
         ax2.set_ylim(0, 100)
         ax2.tick_params(colors='white')
-        ax2.set_title(f"{period}の推移", color='white')
+        ax2.set_title(f"{period}の推移 (平均: {avg_score:.1f})", color='white')
+        ax2.set_ylabel('スコア', color='white')
         
         self.fig.tight_layout()
         self.canvas.draw()
+    
+    def _get_daily_max_scores(self, parsed_data):
+        """今日のデータを6つの時間帯に分割して、各時間帯の最大スコアを取得"""
+        today = datetime.now().date()
+        today_data = [d for d in parsed_data if d['timestamp'].date() == today]
+        
+        time_ranges = [
+            ("0-4時", 0, 4),
+            ("4-8時", 4, 8),
+            ("8-12時", 8, 12),
+            ("12-16時", 12, 16),
+            ("16-20時", 16, 20),
+            ("20-24時", 20, 24)
+        ]
+        
+        labels = []
+        values = []
+        for label, start_hour, end_hour in time_ranges:
+            range_data = [d['score'] for d in today_data if start_hour <= d['timestamp'].hour < end_hour]
+            max_score = max(range_data) if range_data else 0
+            labels.append(label)
+            values.append(max_score)
+        
+        return labels, values
+    
+    def _get_weekly_max_scores(self, parsed_data):
+        """今週のデータを1日ごとに7つに分割して、各日の最大スコアを取得"""
+        today = datetime.now().date()
+        # 今週の月曜日を取得
+        sunday = today - timedelta(days=today.weekday())
+        
+        labels = []
+        values = []
+        for i in range(7):
+            target_date = sunday + timedelta(days=i)
+            day_data = [d['score'] for d in parsed_data if d['timestamp'].date() == target_date]
+            max_score = max(day_data) if day_data else 0
+            labels.append(target_date.strftime("%m/%d"))  # 月/日 形式
+            values.append(max_score)
+        
+        return labels, values
+    
+    def _get_monthly_max_scores(self, parsed_data):
+        """今月のデータを週ごとに分割して、各週の最大スコアを取得"""
+        today = datetime.now().date()
+        # 月初を取得
+        first_day = today.replace(day=1)
+        # 月初の週の月曜日を取得
+        sunday = first_day - timedelta(days=first_day.weekday()+1)
+        
+        labels = []
+        values = []
+        week_num = 1
+        
+        current_sunday = sunday
+        while True:
+            week_end = current_sunday + timedelta(days=6)
+            # その週のデータを取得（ただし当月のみ）
+            week_data = [d['score'] for d in parsed_data 
+                        if current_sunday <= d['timestamp'].date() < week_end 
+                        and d['timestamp'].month == today.month]
+            
+            if not week_data and current_sunday.month == today.month+1:
+                # 来月のデータが出始めたら終了
+                break
+            
+            max_score = max(week_data) if week_data else 0
+            labels.append(f"第{week_num}週")
+            values.append(max_score)
+            
+            current_sunday = week_end + timedelta(days=1)
+            week_num += 1
+            
+            if week_num > 6:  # 最大6週まで
+                break
+        
+        return labels, values
 
     def fill_history_table(self):
-        """履歴テーブルにランダムデータを補充"""
-        for i in range(10):
-            score = random.randint(60, 90)
-            status = "集中" if score > 70 else "注意散漫"
-            self.history_table.setItem(i, 0, QTableWidgetItem(f"1/{i+1}  {score}"))
+        """履歴テーブルにDBデータを補充"""
+        recent_scores = self.db_manager.get_recent_scores(limit=10)
+        for i, score_data in enumerate(recent_scores):
+            if i >= 10:  # テーブルは最大10行
+                break
+            timestamp = score_data['timestamp']
+            score = score_data['score']
+            reaving_ratio = score_data.get('reaving_ratio', 0) or 0  # NullやNoneの場合は0
+            status = self.get_status(score, reaving_ratio)
+            self.history_table.setItem(i, 0, QTableWidgetItem(f"{timestamp}  {score:.1f}"))
             self.history_table.setItem(i, 1, QTableWidgetItem(status))
+        
+        # 残りの行をクリア
+        for i in range(len(recent_scores), 10):
+            self.history_table.setItem(i, 0, QTableWidgetItem(""))
+            self.history_table.setItem(i, 1, QTableWidgetItem(""))
 
     def start_calibration(self):
         """キャリブレーション開始"""

@@ -19,6 +19,17 @@ class DBManager:
         with sqlite3.connect(self.db_path) as conn:
             c = conn.cursor()
             
+            # 既存テーブルを確認し、スキーマが変わった場合は再作成
+            c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='score_logs'")
+            if c.fetchone():
+                # 既存のscore_logsテーブルを確認
+                c.execute("PRAGMA table_info(score_logs)")
+                columns = [row[1] for row in c.fetchall()]
+                if 'reaving_ratio' not in columns:
+                    # reaving_ratio列がない場合は古いスキーマ。テーブルを削除して再作成
+                    c.execute("DROP TABLE IF EXISTS score_logs")
+                    c.execute("DROP TABLE IF EXISTS detail_logs")
+            
             # 1秒ごとの集計ログ用テーブル（main.pyの構造に合わせました）
             c.execute("""
                 CREATE TABLE IF NOT EXISTS detail_logs (
@@ -37,6 +48,7 @@ class DBManager:
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     timestamp TEXT,
                     score REAL,
+                    reaving_ratio REAL,
                     note TEXT
                 )
             """)
@@ -79,11 +91,12 @@ class DBManager:
         with sqlite3.connect(self.db_path) as conn:
             c = conn.cursor()
             c.execute("""
-                INSERT INTO score_logs (timestamp, score, note) 
-                VALUES (?, ?, ?)
+                INSERT INTO score_logs (timestamp, score, reaving_ratio, note) 
+                VALUES (?, ?, ?, ?)
             """, (
                 ts_str, 
-                data.concentration_score, 
+                data.concentration_score,
+                data.reaving_ratio,
                 "" # note
             ))
             conn.commit()
