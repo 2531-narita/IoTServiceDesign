@@ -18,6 +18,7 @@ class FaceDetector:
         self.running = False
         self.latest_data = SensingData(timestamp=datetime.now())
         self.latest_frame = None  # 最新フレーム（表示用）
+        self.latest_landmarks = None  # 最新ランドマーク（表示用）
         self.lock = threading.Lock() # データの読み書き衝突防止
         
         # 視線角度変換の仮パラメータ
@@ -60,6 +61,10 @@ class FaceDetector:
 
             self._last_blendshapes = blendshapes
             
+            # ランドマーク情報を保存（表示用）
+            with self.lock:
+                self.latest_landmarks = landmarkers
+            
             # カテゴリ名からスコアを探すヘルパー関数
             def get_score(name):
                 for b in blendshapes:
@@ -94,6 +99,7 @@ class FaceDetector:
                     timestamp=datetime.now(),
                     face_detected=False
                 )
+                self.latest_landmarks = None
     
     def _calculate_gaze_angle(self):
         """視線角度の計算（yaw=左右, pitch=上下）
@@ -163,6 +169,11 @@ class FaceDetector:
         """最新フレーム（顔表示用）を取得するためのメソッド"""
         with self.lock:
             return self.latest_frame
+    
+    def get_latest_landmarks(self):
+        """最新ランドマーク（描画用）を取得するためのメソッド"""
+        with self.lock:
+            return self.latest_landmarks
             
     def stop(self):
         """detectorのループを安全に停止し、スレッドの終了を待つ"""

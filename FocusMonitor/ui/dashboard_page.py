@@ -348,8 +348,18 @@ class DashboardPage(QWidget):
         
         frame = self.detector.get_latest_frame()
         if frame is not None:
+            # フレームのコピーを作成（元のフレームに影響しないように）
+            display_frame = frame.copy()
+            
+            # ランドマーク情報を取得
+            landmarks = self.detector.get_latest_landmarks()
+            
+            # ランドマークを描画
+            if landmarks is not None:
+                display_frame = self._draw_landmarks(display_frame, landmarks)
+            
             # OpenCV形式 (BGR) → RGB に変換
-            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            rgb_frame = cv2.cvtColor(display_frame, cv2.COLOR_BGR2RGB)
             
             # RGB → QImage に変換
             h, w, ch = rgb_frame.shape
@@ -359,3 +369,28 @@ class DashboardPage(QWidget):
             # QLabel に表示
             pixmap = QPixmap.fromImage(qt_image)
             self.camera_label.setPixmap(pixmap.scaled(400, 400, Qt.KeepAspectRatio))
+    
+    def _draw_landmarks(self, frame, landmarks):
+        """フレーム上にランドマークを描画
+        
+        Args:
+            frame: OpenCV形式のフレーム (BGR)
+            landmarks: MediaPipeのランドマークリスト
+            
+        Returns:
+            ランドマークが描画されたフレーム
+        """
+        h, w = frame.shape[:2]
+        
+        # ランドマークを描画（各点を円で表示）
+        for landmark in landmarks:
+            # ランドマークの座標を画像ピクセル座標に変換
+            x = int(landmark.x * w)
+            y = int(landmark.y * h)
+            
+            # 座標が画像内に収まっているかチェック
+            if 0 <= x < w and 0 <= y < h:
+                # 黄色い円を描画 (BGR形式なので (0, 255, 255) は黄色)
+                cv2.circle(frame, (x, y), 2, (0, 255, 255), -1)
+        
+        return frame
