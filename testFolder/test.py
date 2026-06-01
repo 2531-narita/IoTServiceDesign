@@ -2,6 +2,7 @@ import cv2
 import mediapipe as mp
 import time
 from datetime import datetime
+import numpy as np
 
 # Tasks APIのモジュールを読み込み
 BaseOptions = mp.tasks.BaseOptions
@@ -56,9 +57,15 @@ def draw_landmarks_on_image(rgb_image, detection_result):
     """OpenCVを使って顔のランドマークを描画する関数"""
     face_landmarks_list = detection_result.face_landmarks
     
-    # 描画用に画像をコピー
-    annotated_image = rgb_image.copy()
-    annotated_image = cv2.cvtColor(annotated_image, cv2.COLOR_RGB2BGR)
+    # # 描画用に画像をコピー
+    # annotated_image = rgb_image.copy()
+    # annotated_image = cv2.cvtColor(annotated_image, cv2.COLOR_RGB2BGR)
+
+    # 画像のサイズを取得
+    height, width, _ = rgb_image.shape
+    
+    # 【変更点】元の画像をコピーせず、同じサイズの「真っ黒な画像」を作成
+    annotated_image = np.zeros((height, width, 3), dtype=np.uint8)
 
     # 顔が見つかった場合
     for face_landmarks in face_landmarks_list:
